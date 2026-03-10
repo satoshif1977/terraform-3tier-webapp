@@ -1,0 +1,9 @@
+# すべてのファイルをデフォルト LF で管理
+* text=auto eol=lf
+
+# シェルスクリプトは必ず LF（CRLF だと Linux で実行エラーになる）
+*.sh text eol=lf
+
+# Terraform ファイル
+*.tf text eol=lf
+*.tfvars text eol=lf
