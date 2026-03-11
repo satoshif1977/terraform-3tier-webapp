@@ -6,7 +6,7 @@
 # RDS セキュリティグループ: EC2 からの MySQL 接続のみ許可
 resource "aws_security_group" "rds" {
   name        = "${var.project}-${var.environment}-rds-sg"
-  description = "RDS MySQL へのアクセスを EC2 からのみ許可"
+  description = "Security group for RDS MySQL - allow access from EC2 only"
   vpc_id      = var.vpc_id
 
   # MySQL ポート: EC2 セキュリティグループからのみ許可
@@ -36,7 +36,7 @@ resource "aws_security_group" "rds" {
 # Multi-AZ のために最低 2 つの異なる AZ のサブネットが必要
 resource "aws_db_subnet_group" "this" {
   name        = "${var.project}-${var.environment}-db-subnet-group"
-  description = "RDS 用プライベートサブネットグループ（マルチ AZ）"
+  description = "DB subnet group for RDS Multi-AZ deployment"
   subnet_ids  = var.private_subnet_ids
 
   tags = {
@@ -48,7 +48,7 @@ resource "aws_db_subnet_group" "this" {
 resource "aws_db_parameter_group" "this" {
   family      = "mysql8.0"
   name        = "${var.project}-${var.environment}-mysql-params"
-  description = "MySQL 8.0 カスタムパラメータグループ"
+  description = "MySQL 8.0 custom parameter group"
 
   # 文字コードを UTF-8 に統一（日本語データを正しく扱うために必要）
   parameter {

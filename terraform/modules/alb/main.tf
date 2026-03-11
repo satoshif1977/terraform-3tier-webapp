@@ -6,7 +6,7 @@
 # ALB セキュリティグループ: インターネットからの HTTP/HTTPS を許可
 resource "aws_security_group" "alb" {
   name        = "${var.project}-${var.environment}-alb-sg"
-  description = "ALB へのインターネットアクセスを許可するセキュリティグループ"
+  description = "Security group for ALB - allow HTTP and HTTPS from internet"
   vpc_id      = var.vpc_id
 
   # HTTP を許可（インターネット全体から）

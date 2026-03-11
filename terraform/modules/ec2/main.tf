@@ -6,7 +6,7 @@
 # EC2 セキュリティグループ: ALB からの HTTP のみ許可（直接アクセス禁止）
 resource "aws_security_group" "ec2" {
   name        = "${var.project}-${var.environment}-ec2-sg"
-  description = "EC2 Web サーバーのセキュリティグループ"
+  description = "Security group for EC2 web servers"
   vpc_id      = var.vpc_id
 
   # HTTP: ALB セキュリティグループからのみ許可（直接アクセスを防ぐ）
@@ -48,7 +48,7 @@ resource "aws_security_group" "ec2" {
 
 resource "aws_iam_role" "ec2" {
   name        = "${var.project}-${var.environment}-ec2-role"
-  description = "EC2 用 IAM ロール（PowerUser 権限）"
+  description = "IAM role for EC2 with PowerUser access"
 
   # EC2 サービスがこのロールを引き受けることを許可
   assume_role_policy = jsonencode({
@@ -127,7 +127,7 @@ resource "aws_instance" "web" {
   # ルートボリューム設定
   root_block_device {
     volume_type           = "gp3"
-    volume_size           = 20
+    volume_size           = 30
     encrypted             = true # ストレージ暗号化（セキュリティ要件）
     delete_on_termination = true
   }

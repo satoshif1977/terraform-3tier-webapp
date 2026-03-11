@@ -161,3 +161,43 @@ terraform destroy
 | **合計** | **約 $0.15/時間（約 22円）** |
 
 > ⚠️ 使い終わったら `terraform destroy` で必ず削除してください
+
+---
+
+## 動作確認スクリーンショット
+
+### 1. terraform apply 完了
+
+![terraform apply 完了](docs/screenshots/01_terraform_apply_complete.png)
+
+ALB・EC2・RDS・SNS・SQS を含む全リソースのデプロイが完了した状態。
+
+### 2. Hello from AWS!（ALB 経由でアクセス成功）
+
+![Hello from AWS](docs/screenshots/06_hello_from_aws.png)
+
+ALB の DNS 名にブラウザでアクセスし、EC2 からレスポンスが返ってきた画面。
+
+### 3. EC2 インスタンス 2台 実行中
+
+![EC2 インスタンス](docs/screenshots/05_ec2_instances_running.png)
+
+AZ-a / AZ-c の異なるアベイラビリティゾーンに 2台が正常稼働中。
+
+### 4. ターゲットグループ モニタリング
+
+![ターゲットグループ](docs/screenshots/04_target_group_monitoring.png)
+
+ALB のターゲットグループにリクエストが分散されている様子。
+
+### 5. RDS コンソール（利用可能）
+
+![RDS コンソール](docs/screenshots/02_rds_available.png)
+
+interview-dev-mysql が「利用可能」ステータスで起動中。
+
+### 6. RDS 詳細（Multi-AZ 有効）
+
+![RDS 詳細](docs/screenshots/03_rds_detail_multaz.png)
+
+db.t3.micro・Multi-AZ 有効・VPC 内プライベートサブネットに配置された状態。
