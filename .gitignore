@@ -6,6 +6,7 @@
 .terraform.lock.hcl
 terraform.tfvars
 *.auto.tfvars
+*.tfplan
 
 # クラッシュログ
 crash.log

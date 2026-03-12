@@ -1,7 +1,7 @@
 # =============================================================
-# 面接課題 - Terraform メイン設定
-# 課題1: VPC + ALB + EC2 × 2 + RDS Multi-AZ
-# 課題2: SNS + SQS + EC2 監視基盤
+# AWS 3層 Web アーキテクチャ - Terraform メイン設定
+# Part 1: VPC + ALB + EC2 × 2 + RDS Multi-AZ
+# Part 2: SNS + SQS + EC2 監視基盤
 # =============================================================
 
 terraform {
@@ -103,7 +103,7 @@ module "rds" {
   db_password        = var.db_password
 }
 
-# ── 監視基盤（課題2: SNS + SQS） ──────────────────────────────
+# ── 監視基盤（Part 2: SNS + SQS） ──────────────────────────────
 # SNS → SQS 連携: CPU 使用率のメッセージングパイプライン
 module "monitoring" {
   source = "./modules/monitoring"

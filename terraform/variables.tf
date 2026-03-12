@@ -1,5 +1,5 @@
 # =============================================================
-# 面接課題 - 入力変数定義
+# AWS 3層 Web アーキテクチャ - 入力変数定義
 # =============================================================
 
 variable "aws_region" {
@@ -11,7 +11,7 @@ variable "aws_region" {
 variable "project" {
   description = "プロジェクト名（リソース命名に使用）"
   type        = string
-  default     = "interview"
+  default     = "webapp"
 }
 
 variable "environment" {

@@ -42,7 +42,7 @@ resource "aws_security_group" "ec2" {
 }
 
 # =============================================================
-# IAM ロール（課題2: PowerUser 権限で SNS/SQS 操作を許可）
+# IAM ロール（Part 2: PowerUser 権限で SNS/SQS 操作を許可）
 # EC2 にアタッチすることで、アクセスキー不要で AWS API を呼び出せる
 # =============================================================
 
@@ -66,7 +66,7 @@ resource "aws_iam_role" "ec2" {
 }
 
 # PowerUserAccess: IAM 管理以外のすべての AWS サービスを操作できる権限
-# SNS publish・SQS receive・CloudWatch など課題2 の要件を満たす
+# SNS publish・SQS receive・CloudWatch など Part 2 の要件を満たす
 resource "aws_iam_role_policy_attachment" "power_user" {
   role       = aws_iam_role.ec2.name
   policy_arn = "arn:aws:iam::aws:policy/PowerUserAccess"

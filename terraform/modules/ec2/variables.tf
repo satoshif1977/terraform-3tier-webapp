@@ -46,7 +46,7 @@ variable "key_name" {
 }
 
 variable "sns_topic_arn" {
-  description = "SNS トピック ARN（課題2: CPU 監視メッセージの送信先）"
+  description = "SNS トピック ARN（Part 2: CPU 監視メッセージの送信先）"
   type        = string
 }
 
