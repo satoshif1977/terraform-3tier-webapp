@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <mxfile host="app.diagrams.net" modified="2026-03-10" version="21.0.0">
-  <diagram id="aws-interview-challenge" name="AWS Architecture">
+  <diagram id="aws-3tier-webapp" name="AWS Architecture">
     <mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
       <root>
         <mxCell id="0"/>
@@ -9,7 +9,7 @@
         <!-- ============================================================ -->
         <!-- タイトル -->
         <!-- ============================================================ -->
-        <mxCell id="title" value="AWS アーキテクチャ構成図（面接課題）" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="title" value="AWS 3層 Web アーキテクチャ構成図" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="200" y="20" width="840" height="40" as="geometry"/>
         </mxCell>
 
@@ -112,7 +112,7 @@
         </mxCell>
 
         <!-- ============================================================ -->
-        <!-- 接続線（課題1） -->
+        <!-- 接続線 -->
         <!-- ============================================================ -->
 
         <!-- IGW → ALB -->
@@ -156,11 +156,11 @@
         </mxCell>
 
         <!-- ============================================================ -->
-        <!-- 課題2: SNS / SQS（VPC 外のマネージドサービス） -->
+        <!-- SNS / SQS（VPC 外のマネージドサービス） -->
         <!-- ============================================================ -->
 
-        <!-- 課題2 セクション枠 -->
-        <mxCell id="task2_box" value="課題2: 監視基盤（CPU 使用率通知）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff8e1;strokeColor=#FFA000;strokeWidth=2;verticalAlign=top;spacingTop=10;fontSize=13;fontStyle=1;fontColor=#E65100;" vertex="1" parent="1">
+        <!-- 監視基盤セクション枠 -->
+        <mxCell id="task2_box" value="監視基盤（CPU 使用率通知）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff8e1;strokeColor=#FFA000;strokeWidth=2;verticalAlign=top;spacingTop=10;fontSize=13;fontStyle=1;fontColor=#E65100;" vertex="1" parent="1">
           <mxGeometry x="1060" y="420" width="470" height="460" as="geometry"/>
         </mxCell>
 
