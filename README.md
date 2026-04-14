@@ -1,5 +1,9 @@
 # AWS 3層 Web アーキテクチャ（Terraform）
 
+![Terraform CI](https://github.com/satoshif1977/terraform-3tier-webapp/actions/workflows/terraform-ci.yml/badge.svg)
+![Terraform](https://img.shields.io/badge/Terraform-623CE4?style=flat&logo=terraform&logoColor=white)
+![AWS](https://img.shields.io/badge/AWS-232F3E?style=flat&logo=amazon-aws&logoColor=white)
+
 AWS の代表的な 3層 Web アーキテクチャを Terraform で実装した学習・演習リポジトリです。
 VPC・ALB・EC2・RDS・SNS/SQS を Terraform でコード化し、実際にデプロイして動作確認済みです。
 
