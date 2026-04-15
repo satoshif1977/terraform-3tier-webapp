@@ -3,6 +3,9 @@
 ![Terraform CI](https://github.com/satoshif1977/terraform-3tier-webapp/actions/workflows/terraform-ci.yml/badge.svg)
 ![Terraform](https://img.shields.io/badge/Terraform-623CE4?style=flat&logo=terraform&logoColor=white)
 ![AWS](https://img.shields.io/badge/AWS-232F3E?style=flat&logo=amazon-aws&logoColor=white)
+![Claude Code](https://img.shields.io/badge/Built%20with-Claude%20Code-orange?logo=anthropic)
+![Claude Cowork](https://img.shields.io/badge/Daily%20Use-Claude%20Cowork-blueviolet?logo=anthropic)
+![Claude Skills](https://img.shields.io/badge/Custom-Skills%20Configured-green?logo=anthropic)
 
 AWS の代表的な 3層 Web アーキテクチャを Terraform で実装した学習・演習リポジトリです。
 VPC・ALB・EC2・RDS・SNS/SQS を Terraform でコード化し、実際にデプロイして動作確認済みです。
