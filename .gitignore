@@ -27,3 +27,6 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
+
+# draw.io バックアップ
+.*.bkp
