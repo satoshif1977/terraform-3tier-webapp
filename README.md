@@ -262,7 +262,9 @@ terraform destroy
 
 ## デモ
 
-> ALB ラウンドロビンのデモ GIF（リロードするたびにインスタンス ID・AZ が切り替わる様子）は近日追加予定。
+ALB ラウンドロビン動作：リロードするたびにインスタンス ID・AZ（ap-northeast-1a / 1c）が切り替わる様子。
+
+![ALB ラウンドロビン デモ](docs/demo/demo.gif)
 
 ## 動作確認スクリーンショット
 
