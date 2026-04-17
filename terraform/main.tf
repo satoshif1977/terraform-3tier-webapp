@@ -41,12 +41,12 @@ module "vpc" {
   project     = local.project
   environment = local.environment
 
-  vpc_cidr             = var.vpc_cidr
-  availability_zones   = var.availability_zones
-  public_subnet_cidrs  = var.public_subnet_cidrs
-  private_subnet_cidrs = var.private_subnet_cidrs
-  enable_nat_gateway   = true  # Private Subnet からのインターネットアクセスを許可（SSM・yum等に必要）
-  enable_flow_logs     = true  # セキュリティ監査用にネットワークログを記録
+  vpc_cidr                = var.vpc_cidr
+  availability_zones      = var.availability_zones
+  public_subnet_cidrs     = var.public_subnet_cidrs
+  private_subnet_cidrs    = var.private_subnet_cidrs
+  enable_nat_gateway      = true # Private Subnet からのインターネットアクセスを許可（SSM・yum等に必要）
+  enable_flow_logs        = true # セキュリティ監査用にネットワークログを記録
   flow_log_retention_days = 30
 
   tags = {

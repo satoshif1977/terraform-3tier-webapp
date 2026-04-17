@@ -75,10 +75,10 @@ resource "aws_db_instance" "this" {
   instance_class = var.instance_class
 
   # ストレージ設定
-  allocated_storage     = 20      # 初期ストレージ 20GB
-  max_allocated_storage = 100     # オートスケーリング上限 100GB
+  allocated_storage     = 20  # 初期ストレージ 20GB
+  max_allocated_storage = 100 # オートスケーリング上限 100GB
   storage_type          = "gp3"
-  storage_encrypted     = true    # 保存データの暗号化（セキュリティ要件）
+  storage_encrypted     = true # 保存データの暗号化（セキュリティ要件）
 
   # 認証情報
   db_name  = var.db_name
@@ -88,14 +88,14 @@ resource "aws_db_instance" "this" {
   # ネットワーク設定
   db_subnet_group_name   = aws_db_subnet_group.this.name
   vpc_security_group_ids = [aws_security_group.rds.id]
-  publicly_accessible    = false  # プライベートサブネット内のみ（外部公開しない）
+  publicly_accessible    = false # プライベートサブネット内のみ（外部公開しない）
 
   # Multi-AZ 設定: スタンバイインスタンスを別 AZ に自動作成
   # プライマリに障害が発生すると自動でスタンバイに切り替わる（フェイルオーバー）
   multi_az = true
 
   # バックアップ設定
-  backup_retention_period = 7           # 7 日間の自動バックアップを保持
+  backup_retention_period = 7             # 7 日間の自動バックアップを保持
   backup_window           = "03:00-04:00" # バックアップ実行時間帯（UTC）
   maintenance_window      = "Mon:04:00-Mon:05:00"
 
@@ -103,8 +103,8 @@ resource "aws_db_instance" "this" {
   parameter_group_name = aws_db_parameter_group.this.name
 
   # 削除設定（検証環境用）
-  deletion_protection   = false   # 本番では true 推奨
-  skip_final_snapshot   = true    # 削除時の最終スナップショットをスキップ（検証用）
+  deletion_protection = false # 本番では true 推奨
+  skip_final_snapshot = true  # 削除時の最終スナップショットをスキップ（検証用）
   # 本番では以下を設定:
   # skip_final_snapshot       = false
   # final_snapshot_identifier = "${var.project}-${var.environment}-final-snapshot"

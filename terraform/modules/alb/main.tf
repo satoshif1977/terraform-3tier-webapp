@@ -44,10 +44,10 @@ resource "aws_security_group" "alb" {
 # ALB 本体: パブリックサブネットの 2 つの AZ に配置
 resource "aws_lb" "this" {
   name               = "${var.project}-${var.environment}-alb"
-  internal           = false           # インターネット向け（false = external）
+  internal           = false # インターネット向け（false = external）
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb.id]
-  subnets            = var.public_subnet_ids  # 複数 AZ のパブリックサブネットに配置
+  subnets            = var.public_subnet_ids # 複数 AZ のパブリックサブネットに配置
 
   # 削除保護: 本番では true 推奨（誤削除防止）。今回は検証のため false
   enable_deletion_protection = false
@@ -67,13 +67,13 @@ resource "aws_lb_target_group" "web" {
   # ヘルスチェック: EC2 が正常かどうかを定期確認する設定
   health_check {
     enabled             = true
-    path                = "/"       # ルートパスに HTTP GET リクエストを送る
+    path                = "/" # ルートパスに HTTP GET リクエストを送る
     port                = "traffic-port"
-    healthy_threshold   = 2         # 2 回成功で「正常」と判定
-    unhealthy_threshold = 3         # 3 回失敗で「異常」と判定
+    healthy_threshold   = 2 # 2 回成功で「正常」と判定
+    unhealthy_threshold = 3 # 3 回失敗で「異常」と判定
     timeout             = 5
     interval            = 30
-    matcher             = "200"     # HTTP 200 が返れば正常
+    matcher             = "200" # HTTP 200 が返れば正常
   }
 
   tags = {
