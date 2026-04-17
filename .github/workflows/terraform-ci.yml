@@ -1,4 +1,4 @@
-name: Terraform CI
+name: Terraform CI & Security Scan
 
 # main / master ブランチへの push と PR 時に実行
 on:
@@ -47,7 +47,15 @@ jobs:
       - name: Terraform Validate
         run: terraform validate
 
-      # ── 6. AWS 認証（OIDC / AWS_ROLE_ARN が設定済みの場合）
+      # ── 6. checkov（IaC セキュリティスキャン / AWS 不要）─────
+      - name: checkov（セキュリティスキャン）
+        run: |
+          pip install checkov -q
+          checkov -d . --framework terraform --soft-fail \
+            --output cli --compact
+        working-directory: terraform
+
+      # ── 7. AWS 認証（OIDC / AWS_ROLE_ARN が設定済みの場合）
       - name: Configure AWS credentials
         if: vars.AWS_ROLE_ARN != ''
         uses: aws-actions/configure-aws-credentials@v4
