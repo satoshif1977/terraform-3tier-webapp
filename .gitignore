@@ -30,3 +30,7 @@ Thumbs.db
 
 # draw.io バックアップ
 .*.bkp
+
+# ドキュメント・アーカイブ
+*.docx
+*.zip
