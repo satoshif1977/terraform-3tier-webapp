@@ -1,0 +1,503 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  3-Tier Web Architecture (CloudFormation版)
+  Terraform版（terraform/）と同じ構成をCloudFormationで実装した比較用テンプレート。
+  構成: VPC / ALB / EC2 / RDS(MySQL) / CloudWatch監視
+
+# =============================================================
+# パラメータ
+# =============================================================
+Parameters:
+  ProjectName:
+    Type: String
+    Default: webapp
+    Description: プロジェクト名（リソース命名に使用）
+
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, stg, prod]
+    Description: 環境名
+
+  VpcCidr:
+    Type: String
+    Default: 10.0.0.0/16
+    Description: VPC CIDR ブロック
+
+  PublicSubnet1Cidr:
+    Type: String
+    Default: 10.0.1.0/24
+
+  PublicSubnet2Cidr:
+    Type: String
+    Default: 10.0.2.0/24
+
+  PrivateSubnet1Cidr:
+    Type: String
+    Default: 10.0.11.0/24
+
+  PrivateSubnet2Cidr:
+    Type: String
+    Default: 10.0.12.0/24
+
+  InstanceType:
+    Type: String
+    Default: t3.micro
+    AllowedValues: [t3.micro, t3.small, t3.medium]
+    Description: EC2 インスタンスタイプ
+
+  KeyName:
+    Type: String
+    Default: ''
+    Description: EC2 キーペア名（空の場合 SSH 接続不可）
+
+  DBName:
+    Type: String
+    Default: appdb
+    Description: データベース名
+
+  DBUsername:
+    Type: String
+    Default: admin
+    Description: DB 管理者ユーザー名
+    NoEcho: false
+
+  DBPassword:
+    Type: String
+    NoEcho: true
+    MinLength: 8
+    Description: DB 管理者パスワード（8文字以上）
+
+  DBInstanceClass:
+    Type: String
+    Default: db.t3.micro
+    AllowedValues: [db.t3.micro, db.t3.small, db.t3.medium]
+
+# =============================================================
+# Conditions
+# =============================================================
+Conditions:
+  HasKeyName: !Not [!Equals [!Ref KeyName, '']]
+
+# =============================================================
+# Resources
+# =============================================================
+Resources:
+
+  # ── VPC ────────────────────────────────────────────────────
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-${Environment}-vpc
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: ManagedBy
+          Value: CloudFormation
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-${Environment}-igw
+
+  VPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  # ── サブネット ─────────────────────────────────────────────
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PublicSubnet1Cidr
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-${Environment}-public-1a
+        - Key: Type
+          Value: public
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PublicSubnet2Cidr
+      AvailabilityZone: !Select [1, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-${Environment}-public-1c
+        - Key: Type
+          Value: public
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PrivateSubnet1Cidr
+      AvailabilityZone: !Select [0, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-${Environment}-private-1a
+        - Key: Type
+          Value: private
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PrivateSubnet2Cidr
+      AvailabilityZone: !Select [1, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-${Environment}-private-1c
+        - Key: Type
+          Value: private
+
+  # ── ルートテーブル ─────────────────────────────────────────
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-${Environment}-public-rtb
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: VPCGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      RouteTableId: !Ref PublicRouteTable
+
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-${Environment}-private-rtb
+
+  PrivateSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet1
+      RouteTableId: !Ref PrivateRouteTable
+
+  PrivateSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet2
+      RouteTableId: !Ref PrivateRouteTable
+
+  # ── セキュリティグループ ───────────────────────────────────
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: ALB - HTTP/HTTPS インバウンド許可
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+          Description: HTTP from internet
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+          Description: HTTPS from internet
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-${Environment}-alb-sg
+
+  EC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: EC2 - ALB からの HTTP のみ許可
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
+          Description: HTTP from ALB only
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-${Environment}-ec2-sg
+
+  EC2SecurityGroupSSH:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: HasKeyName
+    Properties:
+      GroupId: !Ref EC2SecurityGroup
+      IpProtocol: tcp
+      FromPort: 22
+      ToPort: 22
+      CidrIp: 0.0.0.0/0
+      Description: SSH（キーペア指定時のみ有効）
+
+  RDSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: RDS - EC2 からの MySQL のみ許可
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          SourceSecurityGroupId: !Ref EC2SecurityGroup
+          Description: MySQL from EC2 only
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-${Environment}-rds-sg
+
+  # ── IAM ────────────────────────────────────────────────────
+  EC2InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${ProjectName}-${Environment}-ec2-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-${Environment}-ec2-role
+
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Sub ${ProjectName}-${Environment}-ec2-profile
+      Roles:
+        - !Ref EC2InstanceRole
+
+  # ── ALB ────────────────────────────────────────────────────
+  ALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub ${ProjectName}-${Environment}-alb
+      Scheme: internet-facing
+      Type: application
+      Subnets:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      SecurityGroups:
+        - !Ref ALBSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-${Environment}-alb
+        - Key: Environment
+          Value: !Ref Environment
+
+  ALBTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub ${ProjectName}-${Environment}-tg
+      Port: 80
+      Protocol: HTTP
+      VpcId: !Ref VPC
+      TargetType: instance
+      HealthCheckPath: /
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+
+  ALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref ALB
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref ALBTargetGroup
+
+  # ── EC2 ────────────────────────────────────────────────────
+  EC2LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub ${ProjectName}-${Environment}-lt
+      LaunchTemplateData:
+        ImageId: '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64}}'
+        InstanceType: !Ref InstanceType
+        IamInstanceProfile:
+          Arn: !GetAtt EC2InstanceProfile.Arn
+        SecurityGroupIds:
+          - !Ref EC2SecurityGroup
+        KeyName: !If [HasKeyName, !Ref KeyName, !Ref AWS::NoValue]
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            set -euo pipefail
+            yum update -y
+            yum install -y httpd
+            systemctl enable httpd
+            systemctl start httpd
+            echo "<h1>${ProjectName} - ${Environment}</h1><p>Deployed by CloudFormation</p>" > /var/www/html/index.html
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: Name
+                Value: !Sub ${ProjectName}-${Environment}-ec2
+              - Key: Environment
+                Value: !Ref Environment
+              - Key: ManagedBy
+                Value: CloudFormation
+
+  AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: !Sub ${ProjectName}-${Environment}-asg
+      MinSize: '1'
+      MaxSize: '2'
+      DesiredCapacity: '1'
+      LaunchTemplate:
+        LaunchTemplateId: !Ref EC2LaunchTemplate
+        Version: !GetAtt EC2LaunchTemplate.LatestVersionNumber
+      VPCZoneIdentifier:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+      TargetGroupARNs:
+        - !Ref ALBTargetGroup
+      HealthCheckType: ELB
+      HealthCheckGracePeriod: 300
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-${Environment}-asg
+          PropagateAtLaunch: false
+
+  # ── RDS ────────────────────────────────────────────────────
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: !Sub ${ProjectName} ${Environment} DB subnet group
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-${Environment}-db-subnet-group
+
+  RDSInstance:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Snapshot
+    Properties:
+      DBInstanceIdentifier: !Sub ${ProjectName}-${Environment}-rds
+      DBName: !Ref DBName
+      DBInstanceClass: !Ref DBInstanceClass
+      Engine: mysql
+      EngineVersion: '8.0'
+      MasterUsername: !Ref DBUsername
+      MasterUserPassword: !Ref DBPassword
+      AllocatedStorage: '20'
+      StorageType: gp2
+      StorageEncrypted: true
+      MultiAZ: false
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      VPCSecurityGroups:
+        - !Ref RDSSecurityGroup
+      BackupRetentionPeriod: 7
+      DeletionProtection: false
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-${Environment}-rds
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: ManagedBy
+          Value: CloudFormation
+
+  # ── CloudWatch 監視 ────────────────────────────────────────
+  CPUAlarmHigh:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${ProjectName}-${Environment}-cpu-high
+      AlarmDescription: EC2 CPU 使用率 80% 超過アラート
+      MetricName: CPUUtilization
+      Namespace: AWS/EC2
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 80
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+
+  ALBUnhealthyHostAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${ProjectName}-${Environment}-unhealthy-host
+      AlarmDescription: ALB 配下の異常ホスト検知
+      MetricName: UnHealthyHostCount
+      Namespace: AWS/ApplicationELB
+      Dimensions:
+        - Name: LoadBalancer
+          Value: !GetAtt ALB.LoadBalancerFullName
+        - Name: TargetGroup
+          Value: !GetAtt ALBTargetGroup.TargetGroupFullName
+      Statistic: Average
+      Period: 60
+      EvaluationPeriods: 2
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+
+# =============================================================
+# Outputs
+# =============================================================
+Outputs:
+  ALBURL:
+    Description: ALB の DNS 名（アプリケーション URL）
+    Value: !Sub http://${ALB.DNSName}
+    Export:
+      Name: !Sub ${ProjectName}-${Environment}-alb-url
+
+  VPCId:
+    Description: VPC ID
+    Value: !Ref VPC
+    Export:
+      Name: !Sub ${ProjectName}-${Environment}-vpc-id
+
+  RDSEndpoint:
+    Description: RDS エンドポイント
+    Value: !GetAtt RDSInstance.Endpoint.Address
+    Export:
+      Name: !Sub ${ProjectName}-${Environment}-rds-endpoint
+
+  PublicSubnet1Id:
+    Description: パブリックサブネット 1a ID
+    Value: !Ref PublicSubnet1
+
+  PublicSubnet2Id:
+    Description: パブリックサブネット 1c ID
+    Value: !Ref PublicSubnet2
