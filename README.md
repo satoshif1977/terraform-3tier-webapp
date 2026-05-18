@@ -126,6 +126,53 @@ ALB ラウンドロビン動作：リロードするたびにインスタンス 
 - **変数管理**：`variables.tf` で環境差分を吸収、`terraform.tfvars.example` で設定を明示
 - **outputs**：ALB DNS・EC2 ID・RDS エンドポイントを出力して動作確認を容易に
 - **CI 連携**：GitHub Actions で `fmt` / `validate` / `plan` を自動実行
+- **Remote Backend**：S3（tfstate 暗号化・バージョニング）+ DynamoDB（ステートロック）でチーム開発対応
+
+---
+
+## Remote Backend セットアップ（S3 + DynamoDB）
+
+tfstate を S3 で管理することで複数人での安全な共同作業が可能です。
+
+### 構成
+
+```
+S3 バケット（tfstate 保管）
+  - SSE-S3 暗号化
+  - バージョニング有効（誤操作からの復旧）
+  - パブリックアクセス完全ブロック
+
+DynamoDB テーブル（ステートロック）
+  - 同時実行を防止し、tfstate の破損を回避
+```
+
+### 手順
+
+**ステップ 1：バックエンドリソースを作成（初回のみ）**
+
+```bash
+chmod +x scripts/setup-backend.sh
+./scripts/setup-backend.sh webapp dev ap-northeast-1
+```
+
+**ステップ 2：`terraform/backend.tf` のバケット名を更新**
+
+```hcl
+backend "s3" {
+  bucket         = "123456789012-webapp-dev-tfstate"  # 出力値に書き換え
+  key            = "terraform-3tier-webapp/terraform.tfstate"
+  region         = "ap-northeast-1"
+  encrypt        = true
+  dynamodb_table = "webapp-dev-tflock"
+}
+```
+
+**ステップ 3：ローカル tfstate を S3 へ移行**
+
+```bash
+cd terraform
+terraform init -migrate-state
+```
 
 ---
 
