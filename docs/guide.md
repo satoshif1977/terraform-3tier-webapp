@@ -184,6 +184,72 @@ terraform output sqs_queue_url
 
 ---
 
+---
+
+## NAT Gateway 追加演習
+
+プライベートサブネットの EC2 がインターネットへアウトバウンド通信できる構成の追加演習です。
+
+### 構成の変更点
+
+| リソース | 内容 |
+|---------|------|
+| Elastic IP | NAT GW 用のグローバル IP を割り当て |
+| NAT Gateway | パブリックサブネットに配置・EIP を関連付け |
+| プライベートルートテーブル | `0.0.0.0/0 → nat-xxx` ルートを追加 |
+
+### 動作確認スクリーンショット
+
+#### NAT Gateway 一覧（Available 状態）
+
+![NAT Gateway Available](screenshots/07_nat_gateway_available.png)
+
+`interview-dev-nat` が Available になったことを確認。EIP `54.250.140.229` が関連付けられている。
+
+#### Elastic IP（NAT GW 用）
+
+![Elastic IP for NAT](screenshots/08_eip_for_nat.png)
+
+`interview-dev-nat-eip` として EIP を確保。NAT GW に関連付けることで、プライベート EC2 のアウトバウンド通信がこの IP を経由する。
+
+#### プライベートルートテーブル（`0.0.0.0/0 → NAT GW`）
+
+![Private Route Table](screenshots/09_private_route_table_nat.png)
+
+`interview-dev-rtb-private` に `0.0.0.0/0 → nat-0c08fdb08c65b6a3f` が追加されたことを確認。
+
+### コスト注意点
+
+| リソース | コスト |
+|---------|--------|
+| NAT Gateway 稼働時間 | 約 $0.062/時間 ≒ **$45/月** |
+| EIP（NAT GW 未関連付け時） | $0.005/時間（NAT GW に関連付け中は無料） |
+
+> 演習後は必ず `terraform destroy` を実行すること。放置すると月 $45 以上の課金が発生する。
+
+---
+
+## Remote Backend（S3 + DynamoDB）確認
+
+tfstate を S3 で管理することでチーム共同作業・state ロックが可能になる構成。
+
+### S3 Remote Backend の確認
+
+![S3 Remote Backend](screenshots/10_remote_backend_s3.png)
+
+`580983239795-webapp-dev-tfstate` バケットに `terraform-3tier-webapp/terraform.tfstate`（90.3 KB）が格納されていることを確認。
+
+### Remote Backend のメリット
+
+| 項目 | ローカル tfstate | S3 Remote Backend |
+|------|---------------|-------------------|
+| チーム共有 | 不可 | 可能（S3 で共有） |
+| 同時実行制御 | なし | DynamoDB でロック |
+| 障害時の復元 | バックアップ次第 | S3 バージョニングで復元可能 |
+| CI/CD 対応 | 不可 | GitHub Actions から参照可能 |
+
+---
+
 ## 後片付け
 
 ```bash
