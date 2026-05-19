@@ -14,7 +14,7 @@ terraform {
   backend "s3" {
     # setup-backend.sh 実行後に出力されるバケット名に書き換えること
     # 例: "123456789012-webapp-dev-tfstate"
-    bucket = "REPLACE_WITH_YOUR_BUCKET_NAME"
+    bucket = "580983239795-webapp-dev-tfstate"
 
     key    = "terraform-3tier-webapp/terraform.tfstate"
     region = "ap-northeast-1"

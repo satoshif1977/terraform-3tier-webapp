@@ -103,7 +103,7 @@ resource "aws_db_instance" "this" {
   parameter_group_name = aws_db_parameter_group.this.name
 
   # 削除設定（検証環境用）
-  deletion_protection = true
+  deletion_protection = false # dev: スタック削除と同時に削除
   skip_final_snapshot = true  # 削除時の最終スナップショットをスキップ（検証用）
   # 本番では以下を設定:
   # skip_final_snapshot       = false
