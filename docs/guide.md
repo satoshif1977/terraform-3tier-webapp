@@ -80,6 +80,24 @@ terraform apply
 # RDS Multi-AZ の構築に 10〜15 分かかる
 ```
 
+#### apply 完了（全リソース作成済み）
+
+![terraform apply complete](screenshots/01_terraform_apply_complete.png)
+
+`Apply complete! Resources: 42 added` が表示され、全リソースが正常に作成されたことを確認。
+
+#### RDS インスタンス（Available 状態）
+
+![RDS Available](screenshots/02_rds_available.png)
+
+RDS コンソールでインスタンスが `Available` になったことを確認。
+
+#### RDS 詳細（Multi-AZ 有効）
+
+![RDS Multi-AZ Detail](screenshots/03_rds_detail_multaz.png)
+
+`Multi-AZ: Yes` が表示され、Primary/Standby が別 AZ に構成されていることを確認。
+
 **待ち時間中の補足説明：**
 
 | リソース | 説明 |
@@ -99,6 +117,24 @@ terraform output alb_dns_name
 # → "Hello from AWS!" が表示されれば成功
 # リロードすると Instance ID・AZ が切り替わる（ALB ラウンドロビンの確認）
 ```
+
+#### EC2 インスタンス（Running 状態・2台）
+
+![EC2 Instances Running](screenshots/05_ec2_instances_running.png)
+
+`ap-northeast-1a` / `ap-northeast-1c` の別 AZ に EC2 が 1 台ずつ Running 状態で起動していることを確認。
+
+#### ALB ターゲットグループ（Healthy 確認）
+
+![Target Group Monitoring](screenshots/04_target_group_monitoring.png)
+
+2台の EC2 が `Healthy` になっていることを確認。ここが `Unhealthy` のままだと ALB 経由でアクセスできない。
+
+#### ブラウザ動作確認（Hello from AWS!）
+
+![Hello from AWS](screenshots/06_hello_from_aws.png)
+
+`http://<alb_dns_name>` にアクセスして `Hello from AWS!` が表示されることを確認。リロードすると Instance ID と AZ が切り替わり、ALB がラウンドロビンしていることがわかる。
 
 RDS 接続確認（SSM Session Manager 経由）：
 ```bash
