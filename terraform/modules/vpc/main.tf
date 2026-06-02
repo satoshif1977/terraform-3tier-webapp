@@ -160,7 +160,11 @@ resource "aws_iam_policy" "flow_log" {
         "logs:DescribeLogGroups",
         "logs:DescribeLogStreams"
       ]
-      Resource = "*"
+      # 対象ロググループ ARN に絞る（ワイルドカード * を排除）
+      Resource = [
+        aws_cloudwatch_log_group.flow_log[0].arn,
+        "${aws_cloudwatch_log_group.flow_log[0].arn}:*",
+      ]
     }]
   })
 }

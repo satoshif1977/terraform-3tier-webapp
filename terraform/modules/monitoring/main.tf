@@ -23,6 +23,9 @@ resource "aws_sqs_queue" "cpu_monitor" {
   # 可視性タイムアウト: メッセージを受信後、他のワーカーに見えなくする時間
   visibility_timeout_seconds = 60
 
+  # SQS マネージド SSE（保存データの暗号化 / CKV_AWS_27）
+  sqs_managed_sse_enabled = true
+
   tags = {
     Name = "${var.project}-${var.environment}-cpu-monitor"
   }

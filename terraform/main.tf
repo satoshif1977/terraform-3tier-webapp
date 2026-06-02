@@ -84,6 +84,7 @@ module "ec2" {
   instance_type      = var.instance_type
   key_name           = var.key_name
   sns_topic_arn      = module.monitoring.sns_topic_arn
+  sqs_queue_arn      = module.monitoring.sqs_queue_arn
   aws_region         = var.aws_region
 }
 

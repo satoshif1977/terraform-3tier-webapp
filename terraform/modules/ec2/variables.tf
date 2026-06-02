@@ -50,6 +50,11 @@ variable "sns_topic_arn" {
   type        = string
 }
 
+variable "sqs_queue_arn" {
+  description = "SQS キュー ARN（Part 2: sqs_poller.sh の実行権限付与に使用）"
+  type        = string
+}
+
 variable "aws_region" {
   description = "AWS リージョン（SNS 送信に使用）"
   type        = string

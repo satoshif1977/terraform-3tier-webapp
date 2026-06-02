@@ -65,11 +65,34 @@ resource "aws_iam_role" "ec2" {
   }
 }
 
-# PowerUserAccess: IAM 管理以外のすべての AWS サービスを操作できる権限
-# SNS publish・SQS receive・CloudWatch など Part 2 の要件を満たす
-resource "aws_iam_role_policy_attachment" "power_user" {
-  role       = aws_iam_role.ec2.name
-  policy_arn = "arn:aws:iam::aws:policy/PowerUserAccess"
+# アプリ用最小権限ポリシー（SNS Publish + SQS 操作のみ）
+# PowerUserAccess（ほぼ全権限）から置き換えて最小権限の原則を適用
+resource "aws_iam_role_policy" "ec2_app" {
+  name = "${var.project}-${var.environment}-ec2-app-policy"
+  role = aws_iam_role.ec2.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        # cpu_monitor.sh: SNS に CPU 使用率を Publish する
+        Effect   = "Allow"
+        Action   = ["sns:Publish"]
+        Resource = var.sns_topic_arn
+      },
+      {
+        # sqs_poller.sh: EC2 から SQS をポーリング・削除する
+        Effect = "Allow"
+        Action = [
+          "sqs:ReceiveMessage",
+          "sqs:DeleteMessage",
+          "sqs:GetQueueAttributes",
+          "sqs:GetQueueUrl",
+        ]
+        Resource = var.sqs_queue_arn
+      }
+    ]
+  })
 }
 
 # SSM Session Manager: SSH キーなしでコンソールから安全にアクセスするための権限
@@ -123,6 +146,13 @@ resource "aws_instance" "web" {
     sns_topic_arn = var.sns_topic_arn
     aws_region    = var.aws_region
   })
+
+  # IMDSv2 強制（トークンなしメタデータアクセスを禁止 / CKV_AWS_79）
+  # userdata.sh は既に IMDSv2 対応済み（X-aws-ec2-metadata-token ヘッダー使用）
+  metadata_options {
+    http_tokens   = "required"
+    http_endpoint = "enabled"
+  }
 
   # ルートボリューム設定
   root_block_device {
