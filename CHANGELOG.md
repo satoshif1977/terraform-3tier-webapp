@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-06-03
+
+### Added
+- `modules/waf/`: AWS WAF v2 モジュール追加（ALB 前段のセキュリティフィルター）
+  - AWS Managed Rules 3セット適用: CommonRuleSet（OWASP Top 10）/ AmazonIpReputationList / KnownBadInputsRuleSet（Log4Shell 等）
+  - WAF Web ACL を ALB に関連付け（`aws_wafv2_web_acl_association`）
+  - Shield Standard はデフォルト有効のため追加設定不要
+- `modules/alb/outputs.tf`: `alb_arn` output を追加（WAF 関連付け用）
+- Checkov CI `soft_fail: false` 対応: WAF ログ（CKV2_AWS_31）を dev/PoC としてインラインスキップ
+
 ## [1.4.0] - 2026-05-27
 
 ### Added

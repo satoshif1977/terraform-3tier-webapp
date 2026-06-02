@@ -3,6 +3,11 @@ output "alb_dns_name" {
   value       = aws_lb.this.dns_name
 }
 
+output "alb_arn" {
+  description = "ALB の ARN（WAF 関連付けに使用）"
+  value       = aws_lb.this.arn
+}
+
 output "alb_sg_id" {
   description = "ALB セキュリティグループ ID（EC2 SG のインバウンドルールに使用）"
   value       = aws_security_group.alb.id

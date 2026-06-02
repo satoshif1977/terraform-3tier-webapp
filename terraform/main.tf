@@ -112,3 +112,14 @@ module "monitoring" {
   project     = local.project
   environment = local.environment
 }
+
+# ── WAF（ALB 前段のセキュリティフィルター）─────────────────────
+# AWS WAF v2: OWASP Top 10 等の攻撃パターンを ALB に到達する前にブロック
+# Shield Standard は AWS デフォルト有効（DDoS 基本保護）
+module "waf" {
+  source = "./modules/waf"
+
+  project     = local.project
+  environment = local.environment
+  alb_arn     = module.alb.alb_arn
+}
