@@ -52,6 +52,9 @@ resource "aws_lb" "this" {
   # 削除保護: 本番では true 推奨（誤削除防止）。今回は検証のため false
   enable_deletion_protection = false
 
+  # 不正な HTTP ヘッダーを破棄（CKV_AWS_131）
+  drop_invalid_header_fields = true
+
   tags = {
     Name = "${var.project}-${var.environment}-alb"
   }

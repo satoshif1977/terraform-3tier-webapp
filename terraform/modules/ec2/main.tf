@@ -140,6 +140,8 @@ resource "aws_instance" "web" {
   vpc_security_group_ids = [aws_security_group.ec2.id]
   iam_instance_profile   = aws_iam_instance_profile.ec2.name
   key_name               = var.key_name != "" ? var.key_name : null
+  monitoring             = true # 詳細モニタリング有効化（CKV_AWS_126）
+  ebs_optimized          = true # EBS 最適化（CKV_AWS_135）
 
   # User Data: インスタンス起動時に自動実行されるスクリプト
   user_data = templatefile("${path.module}/userdata.sh", {

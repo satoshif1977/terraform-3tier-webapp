@@ -47,7 +47,7 @@ module "vpc" {
   private_subnet_cidrs    = var.private_subnet_cidrs
   enable_nat_gateway      = true # Private Subnet からのインターネットアクセスを許可（SSM・yum等に必要）
   enable_flow_logs        = true # セキュリティ監査用にネットワークログを記録
-  flow_log_retention_days = 30
+  flow_log_retention_days = 365 # CKV_AWS_338: 1 年以上の保持が必要
 
   tags = {
     Project     = local.project

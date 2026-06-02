@@ -6,7 +6,8 @@
 
 # SNS トピック: メッセージの送信先となるトピック（パブリッシャーはここへ送る）
 resource "aws_sns_topic" "cpu_monitor" {
-  name = "${var.project}-${var.environment}-cpu-monitor"
+  name              = "${var.project}-${var.environment}-cpu-monitor"
+  kms_master_key_id = "alias/aws/sns" # AWS マネージドキーで保存データを暗号化（CKV_AWS_26）
 
   tags = {
     Name = "${var.project}-${var.environment}-cpu-monitor"

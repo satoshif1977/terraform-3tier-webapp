@@ -61,6 +61,13 @@ resource "aws_db_parameter_group" "this" {
     value = "utf8mb4"
   }
 
+  # SSL/TLS 接続を必須化（転送中暗号化 / CKV2_AWS_69）
+  parameter {
+    name         = "require_secure_transport"
+    value        = "1"
+    apply_method = "immediate"
+  }
+
   tags = {
     Name = "${var.project}-${var.environment}-mysql-params"
   }
@@ -98,6 +105,13 @@ resource "aws_db_instance" "this" {
   backup_retention_period = 7             # 7 日間の自動バックアップを保持
   backup_window           = "03:00-04:00" # バックアップ実行時間帯（UTC）
   maintenance_window      = "Mon:04:00-Mon:05:00"
+  copy_tags_to_snapshot   = true # スナップショットにタグをコピー（CKV2_AWS_60）
+
+  # マイナーバージョン自動アップグレード（CKV_AWS_226）
+  auto_minor_version_upgrade = true
+
+  # CloudWatch Logs へのログエクスポート（CKV_AWS_129）
+  enabled_cloudwatch_logs_exports = ["error", "general", "slowquery"]
 
   # パラメータグループ
   parameter_group_name = aws_db_parameter_group.this.name

@@ -51,7 +51,7 @@ variable "enable_flow_logs" {
 variable "flow_log_retention_days" {
   description = "VPC Flow Logs の CloudWatch Logs 保持期間（日数）"
   type        = number
-  default     = 30
+  default     = 365 # Checkov CKV_AWS_338: 1 年以上の保持が必要
 }
 
 variable "tags" {
