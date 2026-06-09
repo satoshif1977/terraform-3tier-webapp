@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-06-09
+
+### Added
+- `scripts/validate_config.py`: Terraform 設定ファイルの静的検証スクリプト（Python）
+  - 検証項目: required_version 制約 / required_providers / default_tags 必須タグ / 命名規則（var.project・var.environment） / ハードコードされたシークレット検出
+- `scripts/test_validate_config.py`: pytest ユニットテスト 28 件
+- `lambda_go/healthcheck/`: ALB / EC2 / RDS のヘルス状態を取得する Go Lambda 関数
+  - AWS SDK Go v2 使用・interface によるモック設計でテスト容易性を確保
+  - `main_test.go`: モックを使ったユニットテスト 13 件
+- `.github/workflows/python-test.yml`: Python CI（ruff lint + pytest + スモークテスト）
+- `.github/workflows/go-test.yml`: Go CI（build + test -race + vet）
+
+### Fixed
+- `terraform/backend.tf`: S3 バケット名に含まれていた実 AWS アカウント ID をプレースホルダー（`YOUR_ACCOUNT_ID`）に変更
+
 ## [1.5.0] - 2026-06-03
 
 ### Added
