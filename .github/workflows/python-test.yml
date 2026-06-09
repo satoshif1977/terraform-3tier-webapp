@@ -1,0 +1,48 @@
+name: Python Test
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - "scripts/**"
+      - ".github/workflows/python-test.yml"
+  pull_request:
+    branches: [main, master]
+    paths:
+      - "scripts/**"
+      - ".github/workflows/python-test.yml"
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  test:
+    name: Python テスト・Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. ソースコード取得 ──────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      # ── 2. Python セットアップ ───────────────────────────────
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # ── 3. 依存パッケージインストール ────────────────────────
+      - name: Install dependencies
+        run: pip install pytest ruff
+
+      # ── 4. Ruff（Lint）───────────────────────────────────────
+      - name: Ruff lint
+        run: ruff check scripts/
+
+      # ── 5. pytest 実行 ───────────────────────────────────────
+      - name: Pytest
+        run: pytest scripts/test_validate_config.py -v
+
+      # ── 6. スクリプト動作確認（正常終了チェック）────────────
+      - name: Validate config (smoke test)
+        run: python scripts/validate_config.py --dir terraform/
