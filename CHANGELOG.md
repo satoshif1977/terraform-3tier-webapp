@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-06-16
+
+### Changed
+- actions/setup-go v5 -> v6
+- actions/setup-python v5 -> v6
+
 ## [1.6.0] - 2026-06-09
 
 ### Added
