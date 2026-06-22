@@ -164,7 +164,7 @@ export function checkNoHardcodedSecrets(content: string): CheckResult {
   const findings: string[] = [];
 
   const secretPattern =
-    /(?i:password|secret|token)\s*=\s*"(?!var\.|Change-me|<|\$\{)[^"]{8,}"/g;
+    /(password|secret|token)\s*=\s*"(?!var\.|Change-me|<|\$\{)[^"]{8,}"/gi;
   const akiaPattern = /AKIA[0-9A-Z]{16}/g;
   const accountIdPattern = /(?<![0-9])[0-9]{12}(?![0-9])/g;
 
