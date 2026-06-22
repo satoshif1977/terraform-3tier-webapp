@@ -34,3 +34,7 @@ Thumbs.db
 # ドキュメント・アーカイブ
 *.docx
 *.zip
+
+# Node.js
+node_modules/
+dist/
