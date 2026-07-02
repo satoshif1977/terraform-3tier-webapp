@@ -2,12 +2,12 @@ name: Go Test
 
 on:
   push:
-    branches: [main, master]
+    branches: [main]
     paths:
       - "lambda_go/**"
       - ".github/workflows/go-test.yml"
   pull_request:
-    branches: [main, master]
+    branches: [main]
     paths:
       - "lambda_go/**"
       - ".github/workflows/go-test.yml"
