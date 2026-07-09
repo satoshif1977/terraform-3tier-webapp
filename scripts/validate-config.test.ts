@@ -275,4 +275,80 @@ describe("formatReport", () => {
     const output = formatReport(report);
     expect(output).toContain("[NG]");
   });
+
+  test("出力が空文字列でない", () => {
+    const report = validateContent(VALID_MAIN_TF, VALID_VARIABLES_TF);
+    expect(formatReport(report)).not.toBe("");
+  });
+});
+
+// ── 追加テスト ─────────────────────────────────────────────────
+
+describe("checkRequiredVersion (追加)", () => {
+  test("PASS 時は detail が undefined", () => {
+    const result = checkRequiredVersion(VALID_MAIN_TF);
+    expect(result.detail).toBeUndefined();
+  });
+
+  test("バージョン指定が = (exact) 形式でも PASS", () => {
+    const result = checkRequiredVersion('required_version = "= 1.9.3"');
+    expect(result.passed).toBe(true);
+    expect(result.message).toContain("= 1.9.3");
+  });
+});
+
+describe("checkDefaultTags (追加)", () => {
+  test("Project が欠けていれば FAIL", () => {
+    const content = `
+      default_tags {
+        tags = {
+          Environment = var.environment
+          ManagedBy   = "Terraform"
+        }
+      }
+    `;
+    const result = checkDefaultTags(content);
+    expect(result.passed).toBe(false);
+    expect(result.message).toContain("Project");
+  });
+});
+
+describe("checkNamingConvention (追加)", () => {
+  test("format() 関数で var.project と var.environment を使っていれば PASS", () => {
+    const content = "name = format('%s-%s-vpc', var.project, var.environment)";
+    expect(checkNamingConvention(content).passed).toBe(true);
+  });
+});
+
+describe("checkRequiredVariables (追加)", () => {
+  test("project が欠けていれば FAIL で message に project が含まれる", () => {
+    const content =
+      'variable "aws_region" {} variable "environment" {}';
+    const result = checkRequiredVariables(content);
+    expect(result.passed).toBe(false);
+    expect(result.message).toContain("project");
+  });
+});
+
+describe("checkNoHardcodedSecrets (追加)", () => {
+  test("password に直接値があれば FAIL", () => {
+    const content = 'db_password = "SuperSecret123!"';
+    expect(checkNoHardcodedSecrets(content).passed).toBe(false);
+  });
+});
+
+describe("validateContent (追加)", () => {
+  test("required_providers がなければ hasErrors = true", () => {
+    const badMain = VALID_MAIN_TF.replace(
+      /required_providers \{[\s\S]*?\}/,
+      "required_providers {}"
+    );
+    const report = validateContent(badMain, VALID_VARIABLES_TF);
+    expect(report.hasErrors).toBe(true);
+  });
+
+  test("全 PASS 時は results のすべて passed = true", () => {
+    const report = validateContent(VALID_MAIN_TF, VALID_VARIABLES_TF);
+    expect(report.results.every((r) => r.passed)).toBe(true);
+  });
 });
