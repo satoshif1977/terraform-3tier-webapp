@@ -23,12 +23,10 @@ from validate_config import (
     validate,
 )
 
-
 # ── フィクスチャ ──────────────────────────────────────────────────────────────
 
 
-VALID_MAIN_TF = textwrap.dedent(
-    """\
+VALID_MAIN_TF = textwrap.dedent("""\
     terraform {
       required_version = ">= 1.5"
       required_providers {
@@ -56,11 +54,9 @@ VALID_MAIN_TF = textwrap.dedent(
         Name = "${var.project}-${var.environment}-vpc"
       }
     }
-    """
-)
+    """)
 
-VALID_VARIABLES_TF = textwrap.dedent(
-    """\
+VALID_VARIABLES_TF = textwrap.dedent("""\
     variable "aws_region" {
       description = "AWS リージョン"
       type        = string
@@ -76,8 +72,7 @@ VALID_VARIABLES_TF = textwrap.dedent(
       description = "環境名"
       type        = string
     }
-    """
-)
+    """)
 
 
 # ── check_required_version ────────────────────────────────────────────────────
@@ -90,7 +85,7 @@ class TestCheckRequiredVersion:
         assert ">= 1.5" in result.message
 
     def test_fail_when_version_missing(self) -> None:
-        content = 'terraform {\n  required_providers {}\n}'
+        content = "terraform {\n  required_providers {}\n}"
         result = check_required_version(content)
         assert result.passed is False
         assert "required_version" in result.message
@@ -135,8 +130,7 @@ class TestCheckDefaultTags:
         assert "default_tags" in result.message
 
     def test_fail_when_required_tag_missing(self) -> None:
-        content = textwrap.dedent(
-            """\
+        content = textwrap.dedent("""\
             provider "aws" {
               default_tags {
                 tags = {
@@ -145,8 +139,7 @@ class TestCheckDefaultTags:
                 }
               }
             }
-            """
-        )
+            """)
         result = check_default_tags(content)
         assert result.passed is False
         assert "Environment" in result.message
@@ -215,7 +208,7 @@ class TestCheckNoHardcodedSecrets(object):
 
     def test_pass_when_password_uses_var_reference(self, tmp_path: Path) -> None:
         tf_file = tmp_path / "main.tf"
-        tf_file.write_text('db_password = var.db_password\n', encoding="utf-8")
+        tf_file.write_text("db_password = var.db_password\n", encoding="utf-8")
         result = check_no_hardcoded_secrets(tmp_path)
         assert result.passed is True
 
@@ -241,7 +234,9 @@ class TestCheckNoHardcodedSecrets(object):
 
     def test_pass_with_placeholder_password(self, tmp_path: Path) -> None:
         tf_file = tmp_path / "terraform.tfvars.example"
-        tf_file.write_text('db_password = "Change-me-securely-2024!"\n', encoding="utf-8")
+        tf_file.write_text(
+            'db_password = "Change-me-securely-2024!"\n', encoding="utf-8"
+        )
         result = check_no_hardcoded_secrets(tmp_path)
         assert result.passed is True
 
@@ -283,3 +278,98 @@ class TestValidate:
         report = validate(tmp_path)
         assert report.has_errors
         assert any("required_variables" in r.name for r in report.results)
+
+
+# ── check_required_version 追加 ───────────────────────────────────────────────
+
+
+class TestCheckRequiredVersionExtra:
+    def test_pass_with_patch_version(self) -> None:
+        content = 'terraform {\n  required_version = ">= 1.5.0"\n}'
+        result = check_required_version(content)
+        assert result.passed is True
+        assert "1.5.0" in result.message
+
+    def test_fail_on_empty_content(self) -> None:
+        result = check_required_version("")
+        assert result.passed is False
+
+    def test_pass_with_exact_version(self) -> None:
+        content = 'terraform {\n  required_version = "= 1.9.3"\n}'
+        result = check_required_version(content)
+        assert result.passed is True
+
+
+# ── check_default_tags 追加 ───────────────────────────────────────────────────
+
+
+class TestCheckDefaultTagsExtra:
+    def test_fail_when_project_tag_missing(self) -> None:
+        content = textwrap.dedent("""\
+            provider "aws" {
+              default_tags {
+                tags = {
+                  Environment = var.environment
+                  ManagedBy   = "Terraform"
+                }
+              }
+            }
+            """)
+        result = check_default_tags(content)
+        assert result.passed is False
+        assert "Project" in result.message
+
+    def test_fail_when_managedby_tag_missing(self) -> None:
+        content = textwrap.dedent("""\
+            provider "aws" {
+              default_tags {
+                tags = {
+                  Project     = var.project
+                  Environment = var.environment
+                }
+              }
+            }
+            """)
+        result = check_default_tags(content)
+        assert result.passed is False
+        assert "ManagedBy" in result.message
+
+
+# ── check_no_hardcoded_secrets 追加 ──────────────────────────────────────────
+
+
+class TestCheckNoHardcodedSecretsExtra:
+    def test_fail_when_secret_present(self, tmp_path: Path) -> None:
+        # "secret" キーワードに直接値がある場合は検出される
+        tf_file = tmp_path / "main.tf"
+        tf_file.write_text('secret = "AbCdEfGhIjKlMnOpQ123"\n', encoding="utf-8")
+        result = check_no_hardcoded_secrets(tmp_path)
+        assert result.passed is False
+
+    def test_fail_when_token_hardcoded(self, tmp_path: Path) -> None:
+        tf_file = tmp_path / "main.tf"
+        tf_file.write_text(
+            'token = "ghp_SampleTokenValueXYZ123456789"\n', encoding="utf-8"
+        )
+        result = check_no_hardcoded_secrets(tmp_path)
+        assert result.passed is False
+
+    def test_pass_with_empty_directory(self, tmp_path: Path) -> None:
+        result = check_no_hardcoded_secrets(tmp_path)
+        assert result.passed is True
+
+
+# ── ValidationReport 追加 ────────────────────────────────────────────────────
+
+
+class TestValidationReportExtra:
+    def test_has_errors_false_on_empty_report(self) -> None:
+        report = ValidationReport()
+        assert report.has_errors is False
+
+    def test_results_count_matches_added(self) -> None:
+        report = ValidationReport()
+        report.add(CheckResult("a", True, "OK"))
+        report.add(CheckResult("b", False, "NG"))
+        report.add(CheckResult("c", True, "OK"))
+        assert len(report.results) == 3
