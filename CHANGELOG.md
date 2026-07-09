@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-07-10
+
+### Added
+- `scripts/validate_config.py`: Python ユニットテスト 28 件 → 38 件に拡充（境界値・エラーメッセージ検証・複合パターン追加）
+- `scripts/validate-config.ts`: TypeScript ユニットテスト 34 件 → 43 件に拡充（詳細ケース追加）
+- `lambda_go/healthcheck/main_test.go`: Go ユニットテスト 19 件 → 29 件に拡充（エラー系・境界値追加）
+
+### Fixed
+- `scripts/validate-config.test.ts`: TypeScript 正規表現 `(?i:...)` → `/gi` フラグに修正（Node.js 非対応の Python 方言を解消）
+
+### Changed
+- CI: `actions/setup-node` v4 → v6（deprecated 対応）
+- CI: `actions/checkout` v6 → v7
+
 ## [1.7.0] - 2026-06-16
 
 ### Changed
