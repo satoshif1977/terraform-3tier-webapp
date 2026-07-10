@@ -4,6 +4,7 @@
 ![Go Test](https://github.com/satoshif1977/terraform-3tier-webapp/actions/workflows/go-test.yml/badge.svg)
 ![Python Test](https://github.com/satoshif1977/terraform-3tier-webapp/actions/workflows/python-test.yml/badge.svg)
 ![TS Test](https://github.com/satoshif1977/terraform-3tier-webapp/actions/workflows/ts-test.yml/badge.svg)
+[![codecov](https://codecov.io/gh/satoshif1977/terraform-3tier-webapp/graph/badge.svg)](https://codecov.io/gh/satoshif1977/terraform-3tier-webapp)
 ![Terraform](https://img.shields.io/badge/Terraform-623CE4?style=flat&logo=terraform&logoColor=white)
 ![Go](https://img.shields.io/badge/Go-1.22-00ADD8?style=flat&logo=go&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)

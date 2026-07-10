@@ -41,4 +41,11 @@ jobs:
 
       - name: Run tests
         working-directory: scripts
-        run: npm test
+        run: npm run test:coverage
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          directory: scripts/coverage
+          flags: typescript
+          fail_ci_if_error: false
