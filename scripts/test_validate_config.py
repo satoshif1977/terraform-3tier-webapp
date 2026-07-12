@@ -373,3 +373,114 @@ class TestValidationReportExtra:
         report.add(CheckResult("b", False, "NG"))
         report.add(CheckResult("c", True, "OK"))
         assert len(report.results) == 3
+
+
+# ── check_naming_convention 追加 ──────────────────────────────────────────────
+
+
+class TestCheckNamingConventionExtra:
+    def test_fail_when_only_environment_used(self) -> None:
+        content = 'name = "${var.environment}-vpc"'
+        result = check_naming_convention(content)
+        assert result.passed is False
+        assert "var.project" in result.message
+
+    def test_pass_with_vars_on_separate_lines(self) -> None:
+        content = textwrap.dedent("""\
+            resource "aws_instance" "main" {
+              name = "${var.project}-server"
+              env  = var.environment
+            }
+            """)
+        result = check_naming_convention(content)
+        assert result.passed is True
+
+    def test_fail_message_lists_both_missing(self) -> None:
+        result = check_naming_convention("")
+        assert "var.project" in result.message
+        assert "var.environment" in result.message
+
+
+# ── CheckResult 追加 ──────────────────────────────────────────────────────────
+
+
+class TestCheckResultExtra:
+    def test_check_result_with_detail(self) -> None:
+        result = CheckResult("test_check", False, "NG message", detail="追加情報あり")
+        assert result.detail == "追加情報あり"
+        assert result.passed is False
+
+    def test_check_result_without_detail_is_none(self) -> None:
+        result = CheckResult("test_check", True, "OK message")
+        assert result.detail is None
+
+    def test_check_result_name_field(self) -> None:
+        result = CheckResult("my_check", True, "OK")
+        assert result.name == "my_check"
+
+
+# ── check_no_hardcoded_secrets さらに追加 ────────────────────────────────────
+
+
+class TestCheckNoHardcodedSecretsMore:
+    def test_fail_when_aws_account_id_present(self, tmp_path: Path) -> None:
+        tf_file = tmp_path / "main.tf"
+        tf_file.write_text('account_id = "123456789012"\n', encoding="utf-8")
+        result = check_no_hardcoded_secrets(tmp_path)
+        assert result.passed is False
+
+    def test_multiple_clean_tf_files_all_pass(self, tmp_path: Path) -> None:
+        (tmp_path / "main.tf").write_text(VALID_MAIN_TF, encoding="utf-8")
+        (tmp_path / "variables.tf").write_text(VALID_VARIABLES_TF, encoding="utf-8")
+        result = check_no_hardcoded_secrets(tmp_path)
+        assert result.passed is True
+
+    def test_finding_count_in_message(self, tmp_path: Path) -> None:
+        tf_file = tmp_path / "main.tf"
+        tf_file.write_text(
+            'password = "Secret1234!"\ntoken = "ghp_TokenValue12345678"\n',
+            encoding="utf-8",
+        )
+        result = check_no_hardcoded_secrets(tmp_path)
+        assert result.passed is False
+        assert "2" in result.message
+
+
+# ── validate さらに追加 ───────────────────────────────────────────────────────
+
+
+class TestValidateExtra:
+    def test_validate_returns_report_type(self, tmp_path: Path) -> None:
+        report = validate(tmp_path)
+        assert isinstance(report, ValidationReport)
+
+    def test_validate_naming_convention_fail_without_vars(
+        self, tmp_path: Path
+    ) -> None:
+        # default_tags を固定文字列にして var.project / var.environment を使わない main.tf
+        main_tf = textwrap.dedent("""\
+            terraform {
+              required_version = ">= 1.5"
+              required_providers {
+                aws = { source = "hashicorp/aws" }
+              }
+            }
+            provider "aws" {
+              region = "ap-northeast-1"
+              default_tags {
+                tags = {
+                  Project     = "myapp"
+                  Environment = "dev"
+                  ManagedBy   = "Terraform"
+                }
+              }
+            }
+            resource "aws_vpc" "main" {
+              cidr_block = "10.0.0.0/16"
+            }
+            """)
+        (tmp_path / "main.tf").write_text(main_tf, encoding="utf-8")
+        (tmp_path / "variables.tf").write_text(VALID_VARIABLES_TF, encoding="utf-8")
+        report = validate(tmp_path)
+        naming = [r for r in report.results if r.name == "naming_convention"]
+        assert naming and not naming[0].passed
