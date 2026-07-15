@@ -352,3 +352,157 @@ describe("validateContent (追加)", () => {
     expect(report.results.every((r) => r.passed)).toBe(true);
   });
 });
+
+// ── 追加テスト（件数拡充） ─────────────────────────────────────────
+
+describe("checkRequiredVersion (詳細)", () => {
+  test("name フィールドが required_version である", () => {
+    const result = checkRequiredVersion(VALID_MAIN_TF);
+    expect(result.name).toBe("required_version");
+  });
+
+  test("チルダ形式 ~> 1.9 でも PASS", () => {
+    const result = checkRequiredVersion('required_version = "~> 1.9"');
+    expect(result.passed).toBe(true);
+    expect(result.message).toContain("~> 1.9");
+  });
+
+  test("空文字列は FAIL", () => {
+    expect(checkRequiredVersion("").passed).toBe(false);
+  });
+});
+
+describe("checkRequiredProviders (詳細)", () => {
+  test("aws と google の共存でも PASS", () => {
+    const content = `
+      required_providers {
+        aws    = { source = "hashicorp/aws" }
+        google = { source = "hashicorp/google" }
+      }
+    `;
+    expect(checkRequiredProviders(content).passed).toBe(true);
+  });
+
+  test("name フィールドが required_providers である", () => {
+    const result = checkRequiredProviders(VALID_MAIN_TF);
+    expect(result.name).toBe("required_providers");
+  });
+});
+
+describe("checkDefaultTags (詳細)", () => {
+  test("3 タグすべて欠けている場合の FAIL メッセージに全タグが含まれる", () => {
+    const content = `
+      default_tags {
+        tags = {
+          Custom = "value"
+        }
+      }
+    `;
+    const result = checkDefaultTags(content);
+    expect(result.passed).toBe(false);
+    expect(result.message).toContain("Project");
+    expect(result.message).toContain("Environment");
+    expect(result.message).toContain("ManagedBy");
+  });
+
+  test("name フィールドが default_tags である", () => {
+    const result = checkDefaultTags(VALID_MAIN_TF);
+    expect(result.name).toBe("default_tags");
+  });
+});
+
+describe("checkNamingConvention (詳細)", () => {
+  test("補間構文 \${var.project} と \${var.environment} で PASS", () => {
+    const content = 'name = "\${var.project}-\${var.environment}-sg"';
+    expect(checkNamingConvention(content).passed).toBe(true);
+  });
+
+  test("name フィールドが naming_convention である", () => {
+    const result = checkNamingConvention(VALID_MAIN_TF);
+    expect(result.name).toBe("naming_convention");
+  });
+});
+
+describe("checkRequiredVariables (詳細)", () => {
+  test("aws_region が欠けていれば FAIL で message に aws_region が含まれる", () => {
+    const content = 'variable "project" {} variable "environment" {}';
+    const result = checkRequiredVariables(content);
+    expect(result.passed).toBe(false);
+    expect(result.message).toContain("aws_region");
+  });
+
+  test("3 変数すべて欠けている場合はメッセージに全変数が含まれる", () => {
+    const result = checkRequiredVariables("");
+    expect(result.message).toContain("aws_region");
+    expect(result.message).toContain("project");
+    expect(result.message).toContain("environment");
+  });
+
+  test("name フィールドが required_variables である", () => {
+    const result = checkRequiredVariables(VALID_VARIABLES_TF);
+    expect(result.name).toBe("required_variables");
+  });
+});
+
+describe("checkNoHardcodedSecrets (詳細)", () => {
+  test("複数シークレット検出時は件数が 2+ になる", () => {
+    const content =
+      'db_password = "SuperSecret123!" access_key = "AKIAIOSFODNN7EXAMPLE"';
+    const result = checkNoHardcodedSecrets(content);
+    expect(result.passed).toBe(false);
+    expect(result.message).toMatch(/[2-9] 件|[1-9][0-9]+ 件/);
+  });
+
+  test("Change-me プレースホルダーは PASS", () => {
+    const content = 'password = "Change-me"';
+    expect(checkNoHardcodedSecrets(content).passed).toBe(true);
+  });
+
+  test("< プレースホルダーは PASS", () => {
+    const content = 'secret = "<your-secret-here>"';
+    expect(checkNoHardcodedSecrets(content).passed).toBe(true);
+  });
+
+  test("name フィールドが no_hardcoded_secrets である", () => {
+    const result = checkNoHardcodedSecrets(VALID_MAIN_TF);
+    expect(result.name).toBe("no_hardcoded_secrets");
+  });
+});
+
+describe("validateContent (詳細)", () => {
+  test("空文字列の main.tf は hasErrors = true", () => {
+    const report = validateContent("", VALID_VARIABLES_TF);
+    expect(report.hasErrors).toBe(true);
+  });
+
+  test("命名規則違反があれば results に naming_convention FAIL が含まれる", () => {
+    const badMain = VALID_MAIN_TF.replace(/var\.project/g, "myapp").replace(
+      /var\.environment/g,
+      "dev"
+    );
+    const report = validateContent(badMain, VALID_VARIABLES_TF);
+    const r = report.results.find((x) => x.name === "naming_convention");
+    expect(r?.passed).toBe(false);
+  });
+});
+
+describe("formatReport (詳細)", () => {
+  test("ヘッダー行を含む", () => {
+    const report = validateContent(VALID_MAIN_TF, VALID_VARIABLES_TF);
+    expect(formatReport(report)).toContain("Terraform 設定検証レポート");
+  });
+
+  test("エラー件数が出力に含まれる", () => {
+    const report = validateContent("", "");
+    const output = formatReport(report);
+    // 「X 件のエラー」の数字が含まれること
+    expect(output).toMatch(/\d+ 件のエラー/);
+  });
+
+  test("check name が出力に含まれる", () => {
+    const report = validateContent(VALID_MAIN_TF, VALID_VARIABLES_TF);
+    const output = formatReport(report);
+    expect(output).toContain("required_version");
+    expect(output).toContain("required_providers");
+  });
+});
