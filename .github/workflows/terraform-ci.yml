@@ -33,7 +33,7 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v4
         with:
-          terraform_version: "~1.5"
+          terraform_version: "~1.9"
 
       # ── 3. フォーマットチェック（AWS 不要）────────────────
       - name: Terraform Format
