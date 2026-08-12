@@ -192,7 +192,7 @@ class TestCheckNamingConvention:
 # ── check_no_hardcoded_secrets ────────────────────────────────────────────────
 
 
-class TestCheckNoHardcodedSecrets(object):
+class TestCheckNoHardcodedSecrets:
     def test_pass_when_no_secrets(self, tmp_path: Path) -> None:
         tf_file = tmp_path / "main.tf"
         tf_file.write_text(VALID_MAIN_TF, encoding="utf-8")

@@ -21,8 +21,6 @@ import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
-
 
 # ── 定数 ──────────────────────────────────────────────────────────────────────
 
@@ -59,7 +57,7 @@ class CheckResult:
     name: str
     passed: bool
     message: str
-    detail: Optional[str] = None
+    detail: str | None = None
 
 
 @dataclass
