@@ -1,0 +1,17 @@
+# Python コード（scripts/）の lint 設定
+#
+# 姉妹リポジトリ（aws-cdk-multimodal / aws-step-functions-bedrock）と同一の規約に揃えている。
+# ルールを明示的に固定しているのは、ruff の既定ルールが更新されたときに
+# CI だけが落ちる状態を避けるため（既定に頼ると版差でルールが増減する）。
+
+[tool.ruff]
+line-length = 100
+# 共有モジュール（retry.py / logger.py）が 3.11 の CI を持つ姉妹リポジトリと
+# 同一内容で動くよう、下限の 3.11 に合わせて移植性を保つ
+target-version = "py311"
+
+[tool.ruff.lint]
+# E: pycodestyle / F: pyflakes / I: isort / UP: pyupgrade / B: bugbear
+select = ["E", "F", "I", "UP", "B"]
+# E501（行長）はフォーマッタに委ねる
+ignore = ["E501"]
