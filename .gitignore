@@ -38,3 +38,8 @@ Thumbs.db
 # Node.js
 node_modules/
 dist/
+
+# Python キャッシュ
+__pycache__/
+*.py[cod]
+.pytest_cache/
