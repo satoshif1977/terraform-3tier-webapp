@@ -41,7 +41,7 @@ jobs:
 
       # ── 5. pytest 実行 ───────────────────────────────────────
       - name: Pytest
-        run: pytest scripts/test_validate_config.py -v --cov=scripts --cov-report=xml
+        run: pytest scripts/ -v --cov=scripts --cov-report=xml
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v7
         with:
