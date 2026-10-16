@@ -5,6 +5,8 @@
 //	ALB_TARGET_GROUP_ARN  - ALB ターゲットグループの ARN
 //	EC2_INSTANCE_IDS      - カンマ区切りの EC2 インスタンス ID リスト
 //	RDS_DB_IDENTIFIER     - RDS インスタンス識別子
+//	LOG_LEVEL             - ログレベル（debug/info/warn/error/silent・既定 info）
+//	METRICS_NAMESPACE     - EMF メトリクスの名前空間（既定 Tier3Webapp/HealthCheck）
 //
 // Lambda が受け取るイベントは任意（スケジュール実行を想定）。
 // 正常終了時: 各リソースのヘルス情報を JSON で返す。
@@ -15,7 +17,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"strings"
 
@@ -213,12 +215,203 @@ func (c *Checker) CheckRDS(ctx context.Context, dbIdentifier string) (*RDSHealth
 	}, nil
 }
 
+// ── 集計ヘルパー ──────────────────────────────────────────────────────────────
+
+// UnhealthyCount は healthy 以外のターゲット数を返す。
+func (h *ALBHealth) UnhealthyCount() int {
+	n := 0
+	for _, t := range h.Targets {
+		if t.State != string(elbv2types.TargetHealthStateEnumHealthy) {
+			n++
+		}
+	}
+	return n
+}
+
+// UnhealthyCount は running かつステータスチェック 2/2 成功でないインスタンス数を返す。
+func (h *EC2Health) UnhealthyCount() int {
+	n := 0
+	for _, i := range h.Instances {
+		if i.InstanceState != string(ec2types.InstanceStateNameRunning) ||
+			i.SystemStatus != string(ec2types.SummaryStatusOk) ||
+			i.InstanceCheck != string(ec2types.SummaryStatusOk) {
+			n++
+		}
+	}
+	return n
+}
+
+// ── 設定 ──────────────────────────────────────────────────────────────────────
+
+// defaultMetricsNamespace は METRICS_NAMESPACE 未設定時に使う名前空間。
+const defaultMetricsNamespace = "Tier3Webapp/HealthCheck"
+
+// checkConfig は環境変数から読み取ったチェック対象。
+type checkConfig struct {
+	TargetGroupARN string
+	InstanceIDs    []string
+	DBIdentifier   string
+}
+
+// loadCheckConfig は環境変数からチェック対象を組み立てる。
+// EC2_INSTANCE_IDS はカンマ区切りで、空要素と前後の空白は捨てる。
+func loadCheckConfig() checkConfig {
+	cfg := checkConfig{
+		TargetGroupARN: strings.TrimSpace(os.Getenv("ALB_TARGET_GROUP_ARN")),
+		DBIdentifier:   strings.TrimSpace(os.Getenv("RDS_DB_IDENTIFIER")),
+	}
+	for _, id := range strings.Split(os.Getenv("EC2_INSTANCE_IDS"), ",") {
+		if trimmed := strings.TrimSpace(id); trimmed != "" {
+			cfg.InstanceIDs = append(cfg.InstanceIDs, trimmed)
+		}
+	}
+	return cfg
+}
+
+// ── メトリクス ────────────────────────────────────────────────────────────────
+
+// boolMetric は真偽値を CloudWatch に載せられる 1 / 0 に変換する。
+func boolMetric(ok bool) float64 {
+	if ok {
+		return 1
+	}
+	return 0
+}
+
+// recordCount はカウントメトリクスを 1 件記録する。
+//
+// メトリクスの記録に失敗してもヘルスチェック自体は続ける。
+// 監視のための計装が、監視対象の可用性を下げては本末転倒なため。
+func recordCount(logger *slog.Logger, metrics *Metrics, name string, value float64) {
+	if metrics == nil {
+		return
+	}
+	if err := metrics.Count(name, value); err != nil {
+		logger.Warn("メトリクスの記録に失敗しました", "metric", name, "error", err.Error())
+	}
+}
+
+// ── ヘルスチェック本体 ────────────────────────────────────────────────────────
+
+// runHealthCheck は ALB / EC2 / RDS のヘルスチェックを実行し、結果を集約する。
+//
+// AWS SDK の生成を handler 側に残してあるため、テストではモックを注入した Checker と、
+// メモリ上の Writer を持つ logger / metrics を渡して出力まで検証できる。
+//
+// いずれかのチェックが失敗しても残りは実行する。1 つの API エラーで
+// 他のリソースの状態が分からなくなるのを避けるため。
+func runHealthCheck(
+	ctx context.Context,
+	checker *Checker,
+	logger *slog.Logger,
+	metrics *Metrics,
+	cfg checkConfig,
+) *HealthSummary {
+	summary := &HealthSummary{Healthy: true}
+	checkErrors := 0
+
+	// ALB
+	albHealth, err := checker.CheckALB(ctx, cfg.TargetGroupARN)
+	switch {
+	case err != nil:
+		logger.Error("ALB のヘルスチェックに失敗しました", "error", err.Error())
+		summary.Healthy = false
+		checkErrors++
+	case albHealth != nil:
+		summary.ALB = albHealth
+		unhealthy := albHealth.UnhealthyCount()
+		logger.Info("ALB のヘルスチェックが完了しました",
+			"target_group_arn", albHealth.TargetGroupARN,
+			"targets", len(albHealth.Targets),
+			"unhealthy", unhealthy,
+			"all_healthy", albHealth.AllHealthy,
+		)
+		recordCount(logger, metrics, "ALBHealthy", boolMetric(albHealth.AllHealthy))
+		recordCount(logger, metrics, "ALBUnhealthyTargets", float64(unhealthy))
+		if !albHealth.AllHealthy {
+			summary.Healthy = false
+		}
+	default:
+		logger.Debug("ALB のヘルスチェックをスキップしました", "reason", "ALB_TARGET_GROUP_ARN が未設定")
+	}
+
+	// EC2
+	ec2Health, err := checker.CheckEC2(ctx, cfg.InstanceIDs)
+	switch {
+	case err != nil:
+		logger.Error("EC2 のヘルスチェックに失敗しました", "error", err.Error())
+		summary.Healthy = false
+		checkErrors++
+	case ec2Health != nil:
+		summary.EC2 = ec2Health
+		unhealthy := ec2Health.UnhealthyCount()
+		logger.Info("EC2 のヘルスチェックが完了しました",
+			"instances", len(ec2Health.Instances),
+			"unhealthy", unhealthy,
+			"all_healthy", ec2Health.AllHealthy,
+		)
+		recordCount(logger, metrics, "EC2Healthy", boolMetric(ec2Health.AllHealthy))
+		recordCount(logger, metrics, "EC2UnhealthyInstances", float64(unhealthy))
+		if !ec2Health.AllHealthy {
+			summary.Healthy = false
+		}
+	default:
+		logger.Debug("EC2 のヘルスチェックをスキップしました", "reason", "EC2_INSTANCE_IDS が未設定")
+	}
+
+	// RDS
+	rdsHealth, err := checker.CheckRDS(ctx, cfg.DBIdentifier)
+	switch {
+	case err != nil:
+		logger.Error("RDS のヘルスチェックに失敗しました", "error", err.Error())
+		summary.Healthy = false
+		checkErrors++
+	case rdsHealth != nil:
+		summary.RDS = rdsHealth
+		logger.Info("RDS のヘルスチェックが完了しました",
+			"db_identifier", rdsHealth.DBIdentifier,
+			"status", rdsHealth.Status,
+			"healthy", rdsHealth.Healthy,
+		)
+		recordCount(logger, metrics, "RDSHealthy", boolMetric(rdsHealth.Healthy))
+		if !rdsHealth.Healthy {
+			summary.Healthy = false
+		}
+	default:
+		logger.Debug("RDS のヘルスチェックをスキップしました", "reason", "RDS_DB_IDENTIFIER が未設定")
+	}
+
+	recordCount(logger, metrics, "CheckErrors", float64(checkErrors))
+	recordCount(logger, metrics, "OverallHealthy", boolMetric(summary.Healthy))
+
+	if summary.Healthy {
+		logger.Info("ヘルスチェックが完了しました", "healthy", true)
+	} else {
+		logger.Warn("ヘルスチェックで異常を検知しました", "healthy", false, "check_errors", checkErrors)
+	}
+	return summary
+}
+
 // ── Lambda ハンドラー ────────────────────────────────────────────────────────
 
 func handler(ctx context.Context, _ json.RawMessage) (*HealthSummary, error) {
+	logger := NewLoggerFromEnv(LoggerOptions{})
+
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
+		logger.Error("AWS 設定の読み込みに失敗しました", "error", err.Error())
 		return nil, fmt.Errorf("AWS 設定の読み込みに失敗しました: %w", err)
+	}
+
+	namespace := strings.TrimSpace(os.Getenv("METRICS_NAMESPACE"))
+	if namespace == "" {
+		namespace = defaultMetricsNamespace
+	}
+	metrics, err := NewMetrics(MetricsOptions{Namespace: namespace})
+	if err != nil {
+		// メトリクスを出せないことはヘルスチェックを止める理由にならない。
+		logger.Warn("メトリクスの初期化に失敗しました。計装なしで継続します", "error", err.Error())
+		metrics = nil
 	}
 
 	checker := &Checker{
@@ -227,54 +420,14 @@ func handler(ctx context.Context, _ json.RawMessage) (*HealthSummary, error) {
 		rdsCli: rds.NewFromConfig(cfg),
 	}
 
-	targetGroupARN := os.Getenv("ALB_TARGET_GROUP_ARN")
-	instanceIDsRaw := os.Getenv("EC2_INSTANCE_IDS")
-	dbIdentifier := os.Getenv("RDS_DB_IDENTIFIER")
+	recordCount(logger, metrics, "HealthCheckInvocation", 1)
+	summary := runHealthCheck(ctx, checker, logger, metrics, loadCheckConfig())
 
-	var instanceIDs []string
-	if instanceIDsRaw != "" {
-		for _, id := range strings.Split(instanceIDsRaw, ",") {
-			if trimmed := strings.TrimSpace(id); trimmed != "" {
-				instanceIDs = append(instanceIDs, trimmed)
-			}
+	if metrics != nil {
+		if err := metrics.Flush(); err != nil {
+			logger.Warn("メトリクスの出力に失敗しました", "error", err.Error())
 		}
 	}
-
-	summary := &HealthSummary{Healthy: true}
-
-	albHealth, err := checker.CheckALB(ctx, targetGroupARN)
-	if err != nil {
-		log.Printf("ALB チェックエラー: %v", err)
-		summary.Healthy = false
-	} else {
-		summary.ALB = albHealth
-		if albHealth != nil && !albHealth.AllHealthy {
-			summary.Healthy = false
-		}
-	}
-
-	ec2Health, err := checker.CheckEC2(ctx, instanceIDs)
-	if err != nil {
-		log.Printf("EC2 チェックエラー: %v", err)
-		summary.Healthy = false
-	} else {
-		summary.EC2 = ec2Health
-		if ec2Health != nil && !ec2Health.AllHealthy {
-			summary.Healthy = false
-		}
-	}
-
-	rdsHealth, err := checker.CheckRDS(ctx, dbIdentifier)
-	if err != nil {
-		log.Printf("RDS チェックエラー: %v", err)
-		summary.Healthy = false
-	} else {
-		summary.RDS = rdsHealth
-		if rdsHealth != nil && !rdsHealth.Healthy {
-			summary.Healthy = false
-		}
-	}
-
 	return summary, nil
 }
 
